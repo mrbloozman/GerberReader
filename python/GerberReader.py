@@ -37,6 +37,8 @@ reCoordJ = '(?<=J)[0-9+-]*'
 reCoordD = 'D01|D1|D02|D2|D03|D3'
 reCoordG = 'G01|G1|G02|G2|G03|G3'
 reDnn = '^D[1-9][0-9]*$'
+reGnn = '^G[1-9][0-9]*$'
+reG04 = '(?<=G4).*|(?<=G04).*'
 
 def regex(ex,s):
 	try:
@@ -124,13 +126,13 @@ class gerber:
 		},
 		'LevelPolarity':'D',
 		'CurrentAperture':{},
-		'QuadrantMode':'',
+		'QuadrantMode':'', # SINGLE, MULTI
 		'InterpolationMode':'', # LIN, CW, CCW
 		'CurrentPoint':{
 			'X':0.0,
 			'Y':0.0
 		},
-		'RegionMode':'Off'
+		'RegionMode':'OFF' # ON, OFF
 	}
 
 	# Coordinates = {
@@ -288,6 +290,30 @@ class gerber:
 		turtle.pen(fillcolor="black", pencolor="black", pensize=int(100*float(apertureDefinition['Modifiers'][0])))
 		return True
 
+	def GNN(self,gnn):
+		if gnn in(['G01','G1']):
+			self.Graphics['InterpolationMode'] = 'LIN'
+		elif gnn in(['G02','G2']):
+			self.Graphics['InterpolationMode'] = 'CW'
+		elif gnn in(['G03','G3']):
+			self.Graphics['InterpolationMode'] = 'CCW'
+		elif gnn == 'G74':
+			self.Graphics['QuadrantMode'] = 'SINGLE'
+		elif gnn == 'G75':
+			self.Graphics['QuadrantMode'] = 'MULTI'
+		elif gnn == 'G36':
+			self.Graphics['RegionMode'] = 'ON'
+		elif gnn == 'G37':
+			self.Graphics['RegionMode'] = 'OFF'
+
+	def G04(self,g04):
+		print 'Comment: '+g04
+		return True
+
+	def M02(self):
+		print 'EOF'
+		return True
+
 	def parseCoordinate(self,coord):
 		x = regex(reCoordX,coord)
 		y = regex(reCoordY,coord)
@@ -382,11 +408,19 @@ class gerber:
 		print 'Process DataBlock: ' + DataBlock
 		coord = regex(reCoord,DataBlock)
 		dnn = regex(reDnn,DataBlock)
+		gnn = regex(reGnn,DataBlock)
+		g04 = regex(reG04,DataBlock)
 		if coord:
 			self.parseCoordinate(coord)
 			return True
 		elif dnn:
 			self.DNN(dnn)
+		elif gnn:
+			self.GNN(gnn)
+		elif g04:
+			self.G04(g04)
+		elif DataBlock == 'M02':
+			self.M02()
 		else:
 			print DataBlock+': Could not parse data block!'
 			return False
@@ -437,7 +471,7 @@ g = gerber()
 # g.parseLn('%AMDONUTVAR*')
 # g.parseLn('1,1,$1,$2,$3*')
 # g.parseLn('1,0,$4,$2,$3*%')
-with open('example','r+') as f:
+with open('../data/example','r+') as f:
 	g.Loads(f.read())
 # 	for ln in f:
 # 		g.parseLn(ln)
