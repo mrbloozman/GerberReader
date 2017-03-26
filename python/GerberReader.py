@@ -1,6 +1,105 @@
 import re
-import turtle
+# import turtle
 import sys
+
+# Event Handling
+class Event( object ):
+	"""
+	Generic event to use with EventDispatcher.
+	"""
+
+	def __init__(self, event_type, data=None):
+		"""
+		The constructor accepts an event type as string and a custom data
+		"""
+		self._type = event_type
+		self._data = data
+
+	@property
+	def type(self):
+		"""
+		Returns the event type
+		"""
+		return self._type
+
+	@property
+	def data(self):
+		"""
+		Returns the data associated to the event
+		"""
+		return self._data
+
+class EventDispatcher( object ):
+	"""
+	Generic event dispatcher which listen and dispatch events
+	"""
+
+	def __init__(self):
+		self._events = dict()
+
+	def __del__(self):
+		"""
+		Remove all listener references at destruction time
+		"""
+		self._events = None
+
+	def has_listener(self, event_type, listener):
+		"""
+		Return true if listener is register to event_type
+		"""
+		# Check for event type and for the listener
+		if event_type in self._events.keys():
+			return listener in self._events[ event_type ]
+		else:
+			return False
+
+	def dispatch_event(self, event):
+		"""
+		Dispatch an instance of Event class
+		"""
+		# Dispatch the event to all the associated listeners
+		if event.type in self._events.keys():
+			listeners = self._events[ event.type ]
+
+			for listener in listeners:
+				listener( event )
+
+	def add_event_listener(self, event_type, listener):
+		"""
+		Add an event listener for an event type
+		"""
+		# Add listener to the event type
+		if not self.has_listener( event_type, listener ):
+			listeners = self._events.get( event_type, [] )
+
+			listeners.append( listener )
+
+			self._events[ event_type ] = listeners
+
+	def remove_event_listener(self, event_type, listener):
+		"""
+		Remove event listener.
+		"""
+		# Remove the listener from the event type
+		if self.has_listener( event_type, listener ):
+			listeners = self._events[ event_type ]
+
+			if len( listeners ) == 1:
+				# Only this listener remains so remove the key
+				del self._events[ event_type ]
+
+			else:
+				# Update listeners chain
+				listeners.remove( listener )
+
+				self._events[ event_type ] = listeners
+
+class OperationEvent(Event):
+	DRAW = 'draw'
+	MOVE = 'move'
+	FLASH = 'flash'
+	APERTURE = 'aperture'
+	ACK = 'ack'
 
 # Regex matching strings
 # reExtended = '((?<=%).*(?=%))|((?<=%).*$)'
@@ -63,6 +162,18 @@ primitive = {
 
 # Attribute Match
 class gerber:
+	def __init__(self, event_dispatcher):
+		# Save a reference to the event dispatch
+		self.event_dispatcher = event_dispatcher
+
+		# Listen for the RESPOND event type
+		self.event_dispatcher.add_event_listener(
+			OperationEvent.ACK, self.on_answer_event
+		)
+
+	def on_answer_event(self, event):
+		return
+
 	Attributes = {
 		'.FileFunction':[],
 		'.Part':[],
@@ -134,13 +245,6 @@ class gerber:
 		},
 		'RegionMode':'OFF' # ON, OFF
 	}
-
-	# Coordinates = {
-	# 	'X':0.0,
-	# 	'Y':0.0,
-	# 	'I':0.0,
-	# 	'J':0.0
-	# }
 
 	def FS(self,fs):
 		# FS(L|T)(A|I)X<Format>Y<Format>*
@@ -257,22 +361,28 @@ class gerber:
 
 	def D01(self,x,y,i,j):
 		# create event handler for physical movements?
-		turtle.pendown()
-		turtle.goto(x,y)
-		turtle.penup()
+		# turtle.pendown()
+		# turtle.goto(x,y)
+		# turtle.penup()
 		self.Graphics['CurrentPoint']['X'] = x
 		self.Graphics['CurrentPoint']['Y'] = y
 		# self.Coordinates['I'] = i
 		# self.Coordinates['J'] = j
+		self.event_dispatcher.dispatch_event(
+            OperationEvent( OperationEvent.DRAW, self )
+        )
 		return
 
 	def D02(self,x,y,i,j):
-		turtle.penup()
-		turtle.goto(x,y)
+		# turtle.penup()
+		# turtle.goto(x,y)
 		self.Graphics['CurrentPoint']['X'] = x
 		self.Graphics['CurrentPoint']['Y'] = y
 		# self.Coordinates['I'] = i
 		# self.Coordinates['J'] = j
+		self.event_dispatcher.dispatch_event(
+            OperationEvent( OperationEvent.MOVE, self )
+        )
 		return
 
 	def D03(self,x,y,i,j):
@@ -280,6 +390,9 @@ class gerber:
 		self.Graphics['CurrentPoint']['Y'] = y
 		# self.Coordinates['I'] = i
 		# self.Coordinates['J'] = j
+		self.event_dispatcher.dispatch_event(
+            OperationEvent( OperationEvent.FLASH, self )
+        )
 		return
 
 	def DNN(self,dnn):
@@ -287,7 +400,10 @@ class gerber:
 		apertureDefinition = filter(lambda item: item['DCode'] == dnn, self.Graphics['ApertureDefinitions'])[0]
 		print 'Change aperture to: ' + str(apertureDefinition)
 		self.Graphics['CurrentAperture'] = apertureDefinition
-		turtle.pen(fillcolor="black", pencolor="black", pensize=int(100*float(apertureDefinition['Modifiers'][0])))
+		self.event_dispatcher.dispatch_event(
+			OperationEvent(OperationEvent.APERTURE, self)
+		)
+		# turtle.pen(fillcolor="black", pencolor="black", pensize=int(100*float(apertureDefinition['Modifiers'][0])))
 		return True
 
 	def GNN(self,gnn):
@@ -449,36 +565,12 @@ class gerber:
 				DataBlock = DataBlock + c
 	
 
-g = gerber()
-# g.parseLn('%TF.FileFunction,Legend,Top*%')
-# g.parseLn('%TF.Part,CustomerPanel*%')
-# g.parseLn('%TF.MD5,6ab9e892830469cdff7e3e346331d404*%')
-# g.parseLn('%TACustomAttr*%')
-# g.parseLn('%FSTAX42Y42*%')
-# g.parseLn('%MOIN*%')
-# g.parseLn('%TA.AperFunction,Other,MySpecialDrill*%')
-# g.parseLn('%ADD10C,.025*%')
-# g.parseLn('%ADD22R,.050X.050X.027*%')
-# g.parseLn('%ADD57O,.030X.040X.015*%')
-# g.parseLn('%AMDONUTVAR*1,1,$1,$2,$3*1,0,$4,$2,$3*%')
-# g.parseLn('%AMDONUTCAL*1,1,$1,$2,$3*$4=$1x0.75*1,0,$4,$2,$3*%')
-# g.parseLn('%ADD15CIRC*%')
-# g.parseLn('%SRX3Y2I5.0J4.0*%')
-# g.parseLn('%LPD*%')
-# g.parseLn('X10000Y10000D01*')
-# g.parseLn('X-022Y052I+0335J-0125D02*')
-# g.parseLn('X-10000Y-10000D01*')
-# g.parseLn('%AMDONUTVAR*')
-# g.parseLn('1,1,$1,$2,$3*')
-# g.parseLn('1,0,$4,$2,$3*%')
-with open('../data/example','r+') as f:
-	g.Loads(f.read())
-# 	for ln in f:
-# 		g.parseLn(ln)
+# g = gerber()
 
-# g.Loads('%TF.Part,CustomerPanel*%\n%MOIN*%\n%FSTAX42Y42*%\n%AMDONUTVAR*\n1,1,$1,$2,$3*\n1,0,$4,$2,$3*%\nX10000Y10000D01*\nX-022Y052I+0335J-0125D02*\nM02*')
+# with open('../data/example','r+') as f:
+# 	g.Loads(f.read())
 
-print g.Attributes
-print g.Graphics
+# print g.Attributes
+# print g.Graphics
 
-turtle.exitonclick()
+# turtle.exitonclick()
