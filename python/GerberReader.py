@@ -160,7 +160,84 @@ primitive = {
 	7:'Thermal'
 }
 
-# Attribute Match
+# Aperture Macro helpers
+def EvalVar(var,modifiers):
+	for i in range(len(modifiers)):
+		var=var.replace('$'+str(i+1),modifiers[i])
+	var=var.replace('X','*')
+	return float(eval(var))
+
+
+def EvalMacro(macro,modifiers):
+	result = macro
+	# Primitive: Code, Name, Modifiers
+	for p in result['Primitives']:
+		pname = p['Name']
+		if pname == primitive[0]:
+		# Comment
+			p[primitive[0]] = p['Modifiers'][0]
+		elif pname == primitive[1]:
+		# Circle
+			# Exposure
+			if p['Modifiers'][0]=='0':
+				exp = 'OFF'
+			elif p['Modifiers'][0]=='1':
+				exp = 'ON'
+			else:
+				exp = ''
+			# Diameter
+			dia = EvalVar(p['Modifiers'][1],modifiers)
+			# Center X Coord
+			x = EvalVar(p['Modifiers'][2],modifiers)
+			# Center Y Coord
+			y = EvalVar(p['Modifiers'][3],modifiers)
+			p[primitive[1]] = {
+				'exposure':exp,
+				'diameter':dia,
+				'centerpoint':{
+					'X':x,
+					'Y':y
+				}
+			}
+
+		# Vector Line
+		# Center Line
+		# Lower Left Line
+		# Outline
+
+		elif pname == primitive[5]:
+		# Polygon
+			# Exposure
+			if p['Modifiers'][0]=='0':
+				exp = 'OFF'
+			elif p['Modifiers'][0]=='1':
+				exp = 'ON'
+			else:
+				exp = ''
+			# Vertices
+			vert = int(EvalVar(p['Modifiers'][1],modifiers))
+			# Center X Coord
+			x = EvalVar(p['Modifiers'][2],modifiers)
+			# Center Y Coord
+			y = EvalVar(p['Modifiers'][3],modifiers)
+			# Diameter
+			dia = EvalVar(p['Modifiers'][4],modifiers)
+			# Rotation Angle
+			ang = EvalVar(p['Modifiers'][5],modifiers)
+			p[primitive[5]] = {
+				'exposure':exp,
+				'vertices':vert,
+				'centerpoint':{
+					'X':x,
+					'Y':y
+				},
+				'diameter':dia,
+				'angle':ang
+			}
+		# Moire
+		# Thermal
+	return result
+
 class gerber:
 	def __init__(self, event_dispatcher):
 		# Save a reference to the event dispatch
@@ -305,7 +382,7 @@ class gerber:
 
 	def AM(self,am):
 		# %AMDONUTVAR*1,1,$1,$2,$3*1,0,$4,$2,$3*%
-		name = am[0]
+		name = regex(reGraphicAM,am[0])
 		primitives = []
 		for p in am[1:]:
 			expr = regex(reGraphicAMExpr,p)
@@ -398,6 +475,8 @@ class gerber:
 	def DNN(self,dnn):
 		# Event Handler for tool change?
 		apertureDefinition = filter(lambda item: item['DCode'] == dnn, self.Graphics['ApertureDefinitions'])[0]
+		macro = filter(lambda item: item['Name'] == apertureDefinition['Name'], self.Graphics['ApertureMacros'])[0]
+		apertureDefinition['Macro'] = EvalMacro(macro,apertureDefinition['Modifiers'])
 		print 'Change aperture to: ' + str(apertureDefinition)
 		self.Graphics['CurrentAperture'] = apertureDefinition
 		self.event_dispatcher.dispatch_event(
