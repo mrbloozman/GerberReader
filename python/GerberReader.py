@@ -121,6 +121,7 @@ reGraphicADName = '(?<=^D[1-9][0-9]).*(?=,)|(?<=^D[1-9][0-9]).*$'
 reGraphicADModifiers = '(?<=,).*'
 reGraphicAM = '(?<=^AM).*'
 reGraphicAMExpr = '^\$.*'
+reGraphicAMComment = '(?<=^0 ).*'
 reGraphicSR = '(?<=^SR).*'
 reGraphicSRX = '(?<=X).*(?=Y)'
 reGraphicSRY = '(?<=Y).*(?=I)'
@@ -167,6 +168,14 @@ def EvalVar(var,modifiers):
 	var=var.replace('X','*')
 	return float(eval(var))
 
+def EvalExposure(mod):
+	if mod=='0':
+		exp = 'OFF'
+	elif mod=='1':
+		exp = 'ON'
+	else:
+		exp = ''
+	return exp
 
 def EvalMacro(macro,modifiers):
 	result = macro
@@ -179,12 +188,7 @@ def EvalMacro(macro,modifiers):
 		elif pname == primitive[1]:
 		# Circle
 			# Exposure
-			if p['Modifiers'][0]=='0':
-				exp = 'OFF'
-			elif p['Modifiers'][0]=='1':
-				exp = 'ON'
-			else:
-				exp = ''
+			exp = EvalExposure(p['Modifiers'][0])
 			# Diameter
 			dia = EvalVar(p['Modifiers'][1],modifiers)
 			# Center X Coord
@@ -199,21 +203,112 @@ def EvalMacro(macro,modifiers):
 					'Y':y
 				}
 			}
-
+		elif pname == primitive[2]:
 		# Vector Line
+			# Exposure
+			exp = EvalExposure(p['Modifiers'][0])
+			# Line Width
+			lwidth = EvalVar(p['Modifiers'][1],modifiers)
+			# Start X Coord
+			startx = EvalVar(p['Modifiers'][2],modifiers)
+			# Start Y Coord
+			starty = EvalVar(p['Modifiers'][3],modifiers)
+			# End X Coord
+			endx = EvalVar(p['Modifiers'][4],modifiers)
+			# End Y Coord
+			endy = EvalVar(p['Modifiers'][5],modifiers)
+			# Rotation
+			ang = EvalVar(p['Modifiers'][6],modifiers)
+			p[primitive[2]] = {
+				'exposure':exp,
+				'width':lwidth,
+				'startpoint':{
+					'X':startx,
+					'Y':starty
+				},
+				'endpoint':{
+					'X':endx,
+					'Y':endy
+				},
+				'angle':ang
+			} 
+		elif pname == primitive[21]:
 		# Center Line
+			# Exposure
+			exp = EvalExposure(p['Modifiers'][0])
+			# Width
+			width = EvalVar(p['Modifiers'][1],modifiers)
+			# Height
+			height = EvalVar(p['Modifiers'][2],modifiers)
+			# Center X Coord
+			x = EvalVar(p['Modifiers'][3],modifiers)
+			# Center Y Coord
+			y = EvalVar(p['Modifiers'][4],modifiers)
+			# Rotation
+			ang = EvalVar(p['Modifiers'][5],modifiers)
+			p[primitive[21]] = {
+				'exposure':exp,
+				'width':width,
+				'height':height,
+				'centerpoint':{
+					'X':x,
+					'Y':y
+				},
+				'angle':ang
+			}
+		elif pname == primitive[22]:
 		# Lower Left Line
+			# Exposure
+			exp = EvalExposure(p['Modifiers'][0])
+			# Width
+			width = EvalVar(p['Modifiers'][1],modifiers)
+			# Height
+			height = EvalVar(p['Modifiers'][2],modifiers)
+			# Center X Coord
+			x = EvalVar(p['Modifiers'][3],modifiers)
+			# Center Y Coord
+			y = EvalVar(p['Modifiers'][4],modifiers)
+			# Rotation
+			ang = EvalVar(p['Modifiers'][5],modifiers)
+			p[primitive[22]] = {
+				'exposure':exp,
+				'width':width,
+				'height':height,
+				'centerpoint':{
+					'X':x,
+					'Y':y
+				},
+				'angle':ang
+			}
+		elif pname == primitive[4]:
 		# Outline
+			# Exposure
+			exp = EvalExposure(p['Modifiers'][0])
+			# N points
+			npoints = int(EvalVar(p['Modifiers'][1]),modifiers)
+			# Start X Coord
+			startx = EvalVar(p['Modifiers'][2],modifiers)
+			# Start Y Coord
+			starty = EvalVar(p['Modifiers'][3],modifiers)
+			# points
+			points = [{'X':startx,'Y':starty}]
+			for point in range(points):
+				x = EvalVar(p['Modifiers'][(2*(point+2))],modifiers)
+				y = EvalVar(p['Modifiers'][(2*(point+2))+1],modifiers)
+				points.append({'X':x,'Y':y})
+			# Rotation
+			ang = EvalVar(p['Modifiers'][4+(2*points)],modifiers)
+			p[primitive[4]] = {
+				'exposure':exp,
+				'npoints':npoints,
+				'points':points,
+				'angle':ang
+			}
 
 		elif pname == primitive[5]:
 		# Polygon
 			# Exposure
-			if p['Modifiers'][0]=='0':
-				exp = 'OFF'
-			elif p['Modifiers'][0]=='1':
-				exp = 'ON'
-			else:
-				exp = ''
+			exp = EvalExposure(p['Modifiers'][0])
 			# Vertices
 			vert = int(EvalVar(p['Modifiers'][1],modifiers))
 			# Center X Coord
@@ -234,10 +329,65 @@ def EvalMacro(macro,modifiers):
 				'diameter':dia,
 				'angle':ang
 			}
+		elif pname == primitive[6]:
 		# Moire
+			centerpoint = {
+				'X':EvalVar(p['Modifiers'][0],modifiers),
+				'Y':EvalVar(p['Modifiers'][1],modifiers)
+			}
+			diameter = EvalVar(p['Modifiers'][2],modifiers)
+			ringthickness = EvalVar(p['Modifiers'][3],modifiers)
+			ringgap = EvalVar(p['Modifiers'][4],modifiers)
+			maxrings = int(EvalVar(p['Modifiers'][5],modifiers))
+			crosshairthickness = EvalVar(p['Modifiers'][6],modifiers)
+			crosshairlength = EvalVar(p['Modifiers'][7],modifiers)
+			angle = EvalVar(p['Modifiers'][8],modifiers)
+			p[primitive[6]] = {
+				'centerpoint':centerpoint,
+				'diameter':diameter,
+				'ringthickness':ringthickness,
+				'ringgap':ringgap,
+				'maxrings':maxrings,
+				'crosshairthickness':crosshairthickness,
+				'crosshairlength':crosshairlength,
+				'angle':angle
+			}
+		elif pname == primitive[7]:
 		# Thermal
+			centerpoint = {
+				'X':EvalVar(p['Modifiers'][0],modifiers),
+				'Y':EvalVar(p['Modifiers'][1],modifiers)
+			}
+			outerdiameter = EvalVar(p['Modifiers'][2],modifiers)
+			innerdiameter = EvalVar(p['Modifiers'][3],modifiers)
+			gapthickness = EvalVar(p['Modifiers'][4],modifiers)
+			angle = EvalVar(p['Modifiers'][5],modifiers)
+			p[primitive[7]] = {
+				'centerpoint':centerpoint,
+				'outerdiameter':outerdiameter,
+				'innerdiameter':innerdiameter,
+				'gapthickness':gapthickness,
+				'angle':angle
+			}
 	return result
 
+def EvalStandard(apdef):
+	result={}
+	name = apdef['Name']
+	if name == 'C':
+	# Circle
+		dia = float(apdef['Modifiers'][0])
+		if len(apdef['Modifiers'])>1:
+			hole = float(apdef['Modifiers'][1])
+		result = {
+			'C':
+				{
+					'diameter':dia,
+					'hole':hole
+				}
+			}
+
+	return result
 class gerber:
 	def __init__(self, event_dispatcher):
 		# Save a reference to the event dispatch
@@ -376,6 +526,8 @@ class gerber:
 
 			if mods:
 				d['Modifiers']=mods.split('X')
+			else:
+				d['Modifiers']=[]
 
 			self.Graphics['ApertureDefinitions'].append(d)
 		return True
@@ -386,10 +538,15 @@ class gerber:
 		primitives = []
 		for p in am[1:]:
 			expr = regex(reGraphicAMExpr,p)
+			comm = regex(reGraphicAMComment,p)
 			if expr:
 				pCode = None
 				pName = 'Expression'
 				pMods = [expr]
+			elif comm:
+				pCode = 0
+				pName = primitive[pCode]
+				pMods = [comm]
 			else:
 				pCode = int(p.split(',')[0])
 				pName = primitive[pCode]
@@ -475,8 +632,13 @@ class gerber:
 	def DNN(self,dnn):
 		# Event Handler for tool change?
 		apertureDefinition = filter(lambda item: item['DCode'] == dnn, self.Graphics['ApertureDefinitions'])[0]
-		macro = filter(lambda item: item['Name'] == apertureDefinition['Name'], self.Graphics['ApertureMacros'])[0]
-		apertureDefinition['Macro'] = EvalMacro(macro,apertureDefinition['Modifiers'])
+		macros = filter(lambda item: item['Name'] == apertureDefinition['Name'], self.Graphics['ApertureMacros'])
+		if len(macros)>0:
+			macro = macros[0]
+			apertureDefinition['Macro'] = EvalMacro(macro,apertureDefinition['Modifiers'])
+		else:
+			apertureDefinition['Macro'] = {}
+		apertureDefinition['Standard'] = EvalStandard(apertureDefinition)
 		print 'Change aperture to: ' + str(apertureDefinition)
 		self.Graphics['CurrentAperture'] = apertureDefinition
 		self.event_dispatcher.dispatch_event(
