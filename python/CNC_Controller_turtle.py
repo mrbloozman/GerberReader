@@ -58,11 +58,17 @@ class Controller( object ):
 		goto(event.data.Graphics['CurrentPoint'])
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
-			Standard_Circle(aperture['Standard']['C'])
+			StandardCircle(aperture['Standard']['C'])
 		if 'Primitives' in aperture:
 			for p in aperture['Primitives']:
 				if 'Circle' in p:
-					Primitive_Circle(p['Circle'])
+					PrimitiveCircle(p['Circle'])
+				elif 'VectorLine' in p:
+					PrimitiveVectorLine(p['VectorLine'])
+				elif 'CenterLine' in p:
+					PrimitiveCenterLine(p['CenterLine'])
+				elif 'LowerLeftLine' in p:
+					PrimitiveLowerLeftLine(p['LowerLeftLine'])
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
@@ -85,23 +91,124 @@ def setExposure(exp):
 scale = 100
 
 def goto(point):
-	turtle.penup()
 	turtle.goto(scale*point['X'],scale*point['Y'])
-	turtle.setheading(0)
 
-def Primitive_Circle(c):
+def PrimitiveComment(c):
+	return
+
+def PrimitiveCircle(c):
+	turtle.mode('logo')
 	turtle.penup()
 	setExposure(c['Exposure'])
-	centerpoint = c['CenterPoint']
 	radius = c['Diameter']/2
-	goto(centerpoint)
-	turtle.pendown()
-	turtle.circle(radius=scale*c['Diameter']/2)
-
-def Standard_Circle(c):
-	radius = c['Diameter']/2
+	startpoint = {
+		'X':c['CenterPoint']['X']+radius,
+		'Y':c['CenterPoint']['Y']
+	}
+	goto(startpoint)
 	turtle.pendown()
 	turtle.circle(radius=scale*radius)
+	turtle.penup()
+
+def PrimitiveVectorLine(vl):
+	turtle.penup()
+	setExposure(vl['Exposure'])
+	turtle.width(scale*vl['Width'])
+	goto(vl['StartPoint'])
+	turtle.pendown()
+	goto(vl['EndPoint'])
+	turtle.penup()
+	return
+
+def PrimitiveCenterLine(cl):
+	turtle.penup()
+	setExposure(cl['Exposure'])
+	turtle.width(1)
+	point1 = {
+		'X':cl['CenterPoint']['X']-(cl['Width']/2),
+		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)
+	}
+	point2 = {
+		'X':cl['CenterPoint']['X']+(cl['Width']/2),
+		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)
+	}
+	point3 = {
+		'X':cl['CenterPoint']['X']+(cl['Width']/2),
+		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)
+	}
+	point4 = {
+		'X':cl['CenterPoint']['X']-(cl['Width']/2),
+		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)
+	}
+	goto(point1)
+	turtle.begin_fill()
+	turtle.pendown()
+	goto(point2)
+	goto(point3)
+	goto(point4)
+	goto(point1)
+	turtle.penup()
+	turtle.end_fill()
+	return
+
+def PrimitiveLowerLeftLine(lll):
+	turtle.penup()
+	setExposure(lll['Exposure'])
+	turtle.width(1)
+	point1 = lll['LowerLeftPoint']
+	point2 = {
+		'X':lll['LowerLeftPoint']['X']+lll['Width'],
+		'Y':lll['LowerLeftPoint']['Y']
+	}
+	point3 = {
+		'X':lll['LowerLeftPoint']['X']+lll['Width'],
+		'Y':lll['LowerLeftPoint']['Y']+lll['Height']
+	}
+	point4 = {
+		'X':lll['LowerLeftPoint']['X'],
+		'Y':lll['LowerLeftPoint']['Y']+lll['Height']
+	}
+	goto(point1)
+	turtle.begin_fill()
+	turtle.pendown()
+	goto(point2)
+	goto(point3)
+	goto(point4)
+	goto(point1)
+	turtle.penup()
+	turtle.end_fill()
+	return
+
+def PrimitiveOutline(ol):
+	return
+
+def PrimitivePolygon(poly):
+	return
+
+def PrimitiveMoire(m):
+	return
+
+def PrimitiveThermal(t):
+	return
+
+def StandardCircle(c):
+	radius = c['Diameter']/2
+	startpoint = {
+		'X':((turtle.position()[0]/scale)+radius),
+		'Y':(turtle.position()[1]/scale)
+	}
+	goto(startpoint)
+	turtle.pendown()
+	turtle.circle(radius=scale*radius)
+
+def StandardRectangle(r):
+	return
+
+def StandardObround(o):
+	return
+
+def StandardPolygon(poly):
+	return
 
 dispatcher = GerberReader.EventDispatcher()
 g = GerberReader.gerber(dispatcher)
