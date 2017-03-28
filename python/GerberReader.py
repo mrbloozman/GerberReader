@@ -177,14 +177,14 @@ def EvalExposure(mod):
 		exp = ''
 	return exp
 
-def EvalMacro(macro,modifiers):
-	result = macro
+def EvalPrimitives(primitives,modifiers):
+	result = []
 	# Primitive: Code, Name, Modifiers
-	for p in result['Primitives']:
+	for p in primitives:
 		pname = p['Name']
 		if pname == primitive[0]:
 		# Comment
-			p[primitive[0]] = p['Modifiers'][0]
+			result.append({'Comment':p['Modifiers'][0]})
 		elif pname == primitive[1]:
 		# Circle
 			# Exposure
@@ -195,14 +195,15 @@ def EvalMacro(macro,modifiers):
 			x = EvalVar(p['Modifiers'][2],modifiers)
 			# Center Y Coord
 			y = EvalVar(p['Modifiers'][3],modifiers)
-			p[primitive[1]] = {
-				'exposure':exp,
-				'diameter':dia,
-				'centerpoint':{
+			cir = {
+				'Exposure':exp,
+				'Diameter':dia,
+				'CenterPoint':{
 					'X':x,
 					'Y':y
 				}
 			}
+			result.append({'Circle':cir})
 		elif pname == primitive[2]:
 		# Vector Line
 			# Exposure
@@ -219,19 +220,20 @@ def EvalMacro(macro,modifiers):
 			endy = EvalVar(p['Modifiers'][5],modifiers)
 			# Rotation
 			ang = EvalVar(p['Modifiers'][6],modifiers)
-			p[primitive[2]] = {
-				'exposure':exp,
-				'width':lwidth,
-				'startpoint':{
+			vl = {
+				'Exposure':exp,
+				'Width':lwidth,
+				'StartPoint':{
 					'X':startx,
 					'Y':starty
 				},
-				'endpoint':{
+				'EndPoint':{
 					'X':endx,
 					'Y':endy
 				},
-				'angle':ang
+				'Angle':ang
 			} 
+			result.append({'VectorLine':vl})
 		elif pname == primitive[21]:
 		# Center Line
 			# Exposure
@@ -246,16 +248,17 @@ def EvalMacro(macro,modifiers):
 			y = EvalVar(p['Modifiers'][4],modifiers)
 			# Rotation
 			ang = EvalVar(p['Modifiers'][5],modifiers)
-			p[primitive[21]] = {
-				'exposure':exp,
-				'width':width,
-				'height':height,
-				'centerpoint':{
+			cl = {
+				'Exposure':exp,
+				'Width':width,
+				'Height':height,
+				'CenterPoint':{
 					'X':x,
 					'Y':y
 				},
-				'angle':ang
+				'Angle':ang
 			}
+			result.append({'CenterLine':cl})
 		elif pname == primitive[22]:
 		# Lower Left Line
 			# Exposure
@@ -270,16 +273,17 @@ def EvalMacro(macro,modifiers):
 			y = EvalVar(p['Modifiers'][4],modifiers)
 			# Rotation
 			ang = EvalVar(p['Modifiers'][5],modifiers)
-			p[primitive[22]] = {
-				'exposure':exp,
-				'width':width,
-				'height':height,
-				'centerpoint':{
+			lll = {
+				'Exposure':exp,
+				'Width':width,
+				'Height':height,
+				'LowerLeftPoint':{
 					'X':x,
 					'Y':y
 				},
-				'angle':ang
+				'Angle':ang
 			}
+			result.append({'LowerLeftLine':lll})
 		elif pname == primitive[4]:
 		# Outline
 			# Exposure
@@ -298,12 +302,13 @@ def EvalMacro(macro,modifiers):
 				points.append({'X':x,'Y':y})
 			# Rotation
 			ang = EvalVar(p['Modifiers'][4+(2*points)],modifiers)
-			p[primitive[4]] = {
-				'exposure':exp,
-				'npoints':npoints,
-				'points':points,
-				'angle':ang
+			ol = {
+				'Exposure':exp,
+				'NPoints':npoints,
+				'Points':points,
+				'Angle':ang
 			}
+			result.append({'Outline':ol})
 
 		elif pname == primitive[5]:
 		# Polygon
@@ -319,16 +324,17 @@ def EvalMacro(macro,modifiers):
 			dia = EvalVar(p['Modifiers'][4],modifiers)
 			# Rotation Angle
 			ang = EvalVar(p['Modifiers'][5],modifiers)
-			p[primitive[5]] = {
-				'exposure':exp,
-				'vertices':vert,
-				'centerpoint':{
+			poly = {
+				'Exposure':exp,
+				'Vertices':vert,
+				'Centerpoint':{
 					'X':x,
 					'Y':y
 				},
-				'diameter':dia,
-				'angle':ang
+				'Diameter':dia,
+				'Angle':ang
 			}
+			result.append({'Polygon':poly})
 		elif pname == primitive[6]:
 		# Moire
 			centerpoint = {
@@ -342,16 +348,17 @@ def EvalMacro(macro,modifiers):
 			crosshairthickness = EvalVar(p['Modifiers'][6],modifiers)
 			crosshairlength = EvalVar(p['Modifiers'][7],modifiers)
 			angle = EvalVar(p['Modifiers'][8],modifiers)
-			p[primitive[6]] = {
-				'centerpoint':centerpoint,
-				'diameter':diameter,
-				'ringthickness':ringthickness,
-				'ringgap':ringgap,
-				'maxrings':maxrings,
-				'crosshairthickness':crosshairthickness,
-				'crosshairlength':crosshairlength,
-				'angle':angle
+			moire = {
+				'CenterPoint':centerpoint,
+				'Diameter':diameter,
+				'RingThickness':ringthickness,
+				'RingGap':ringgap,
+				'MaxRings':maxrings,
+				'CrosshairThickness':crosshairthickness,
+				'CrosshairLength':crosshairlength,
+				'Angle':angle
 			}
+			result.append({'Moire':moire})
 		elif pname == primitive[7]:
 		# Thermal
 			centerpoint = {
@@ -362,13 +369,14 @@ def EvalMacro(macro,modifiers):
 			innerdiameter = EvalVar(p['Modifiers'][3],modifiers)
 			gapthickness = EvalVar(p['Modifiers'][4],modifiers)
 			angle = EvalVar(p['Modifiers'][5],modifiers)
-			p[primitive[7]] = {
-				'centerpoint':centerpoint,
-				'outerdiameter':outerdiameter,
-				'innerdiameter':innerdiameter,
-				'gapthickness':gapthickness,
-				'angle':angle
+			therm = {
+				'CenterPoint':centerpoint,
+				'OuterDiameter':outerdiameter,
+				'InnerDiameter':innerdiameter,
+				'GapThickness':gapthickness,
+				'Angle':angle
 			}
+			result.append({'Thermal':therm})
 	return result
 
 def EvalStandard(apdef):
@@ -379,15 +387,43 @@ def EvalStandard(apdef):
 		dia = float(apdef['Modifiers'][0])
 		if len(apdef['Modifiers'])>1:
 			hole = float(apdef['Modifiers'][1])
-		result = {
-			'C':
-				{
-					'diameter':dia,
-					'hole':hole
-				}
-			}
+		else:
+			hole = 0.0
+		result[name] = {
+			'Diameter':dia,
+			'Hole':hole
+		}
+	elif (name == 'R') or (name == 'O'):
+	# Rectangle or Obround
+		xsize = float(apdef['Modifiers'][0])
+		ysize = float(apdef['Modifiers'][1])
+		if len(apdef['Modifiers'])>2:
+			hole = float(apdef['Modifiers'][2])
+		else:
+			hole = 0.0
+		result[name] = {
+			'XSize':xsize,
+			'YSize':ysize,
+			'Hole':hole
+		}
+	elif name == 'P':
+	# Polygon
+		outerdiameter = float(apdef['Modifiers'][0])
+		vertices = int(apdef['Modifiers'][1])
+		rotation = float(apdef['Modifiers'][2])
+		if len(apdef['Modifiers'])>3:
+			hole = float(apdef['Modifiers'][3])
+		else:
+			hole = 0.0
+		result[name] = {
+			'OuterDiameter':outerdiameter,
+			'Vertices':vertices,
+			'Rotation':rotation,
+			'Hole':hole
+		}
 
 	return result
+
 class gerber:
 	def __init__(self, event_dispatcher):
 		# Save a reference to the event dispatch
@@ -635,9 +671,9 @@ class gerber:
 		macros = filter(lambda item: item['Name'] == apertureDefinition['Name'], self.Graphics['ApertureMacros'])
 		if len(macros)>0:
 			macro = macros[0]
-			apertureDefinition['Macro'] = EvalMacro(macro,apertureDefinition['Modifiers'])
+			apertureDefinition['Primitives'] = EvalPrimitives(macro['Primitives'],apertureDefinition['Modifiers'])
 		else:
-			apertureDefinition['Macro'] = {}
+			apertureDefinition['Primitives'] = {}
 		apertureDefinition['Standard'] = EvalStandard(apertureDefinition)
 		print 'Change aperture to: ' + str(apertureDefinition)
 		self.Graphics['CurrentAperture'] = apertureDefinition

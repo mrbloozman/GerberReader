@@ -59,8 +59,8 @@ class Controller( object ):
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
 			Standard_Circle(aperture['Standard']['C'])
-		if 'Primitives' in aperture['Macro']:
-			for p in aperture['Macro']['Primitives']:
+		if 'Primitives' in aperture:
+			for p in aperture['Primitives']:
 				if 'Circle' in p:
 					Primitive_Circle(p['Circle'])
 		self.event_dispatcher.dispatch_event(
@@ -91,15 +91,15 @@ def goto(point):
 
 def Primitive_Circle(c):
 	turtle.penup()
-	setExposure(c['exposure'])
-	centerpoint = c['centerpoint']
-	radius = c['diameter']/2
+	setExposure(c['Exposure'])
+	centerpoint = c['CenterPoint']
+	radius = c['Diameter']/2
 	goto(centerpoint)
 	turtle.pendown()
-	turtle.circle(radius=scale*c['diameter']/2)
+	turtle.circle(radius=scale*c['Diameter']/2)
 
 def Standard_Circle(c):
-	radius = c['diameter']/2
+	radius = c['Diameter']/2
 	turtle.pendown()
 	turtle.circle(radius=scale*radius)
 
