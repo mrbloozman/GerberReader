@@ -31,9 +31,12 @@ class Controller( object ):
 		Event handler for DRAW event type
 		"""
 		point = event.data.Graphics['CurrentPoint']
+		aperture = event.data.Graphics['CurrentAperture']
+		if 'C' in aperture['Standard']:
+			turtle.width(scale*aperture['Standard']['C']['Diameter'])
 		print 'DRAW: ' + str(point)
 		turtle.pendown()
-		turtle.goto(point['X'],point['Y'])
+		goto(point)
 		turtle.penup()
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
@@ -46,7 +49,7 @@ class Controller( object ):
 		point = event.data.Graphics['CurrentPoint']
 		print 'MOVE: ' + str(point)
 		turtle.penup()
-		turtle.goto(point['X'],point['Y'])
+		goto(point)
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
@@ -55,27 +58,37 @@ class Controller( object ):
 		"""
 		Event handler for FLASH event type
 		"""
-		goto(event.data.Graphics['CurrentPoint'])
+		# goto(event.data.Graphics['CurrentPoint'])
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
 			StandardCircle(aperture['Standard']['C'])
 		if 'Primitives' in aperture:
 			for p in aperture['Primitives']:
-				if 'Circle' in p:
-					PrimitiveCircle(p['Circle'])
+				if 'Comment' in p:
+					PrimitiveComment(p['Comment'])
+				elif 'Circle' in p:
+					PrimitiveCircle(p['Circle'],event.data.Graphics['CurrentPoint'])
 				elif 'VectorLine' in p:
-					PrimitiveVectorLine(p['VectorLine'])
+					PrimitiveVectorLine(p['VectorLine'],event.data.Graphics['CurrentPoint'])
 				elif 'CenterLine' in p:
-					PrimitiveCenterLine(p['CenterLine'])
+					PrimitiveCenterLine(p['CenterLine'],event.data.Graphics['CurrentPoint'])
 				elif 'LowerLeftLine' in p:
-					PrimitiveLowerLeftLine(p['LowerLeftLine'])
+					PrimitiveLowerLeftLine(p['LowerLeftLine'],event.data.Graphics['CurrentPoint'])
+				elif 'Outline' in p:
+					PrimitiveOutline(p['Outline'],event.data.Graphics['CurrentPoint'])
+				elif 'Polygon' in p:
+					PrimitivePolygon(p['Polygon'],event.data.Graphics['CurrentPoint'])
+				elif 'Moire' in p:
+					PrimitiveMoire(p['Moire'],event.data.Graphics['CurrentPoint'])
+				elif 'Thermal' in p:
+					PrimitiveThermal(p['Thermal'],event.data.Graphics['CurrentPoint'])
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
 
 	def on_aperture_event(self, event):
 		aperture = event.data.Graphics['CurrentAperture']
-		print 'APERTURE: '+ str(aperture)
+		# print 'APERTURE: '+ str(aperture)
 		# turtle.pen(fillcolor="black", pencolor="black", pensize=int(100*float(aperture['Modifiers'][0])))
 		turtle.pen(fillcolor="black", pencolor="black")
 		self.event_dispatcher.dispatch_event(
@@ -85,19 +98,22 @@ class Controller( object ):
 def setExposure(exp):
 	if exp == 'ON':
 		turtle.pen(pencolor='black')
+		turtle.color('black')
 	elif exp == 'OFF':
 		turtle.pen(pencolor='white')
+		turtle.color('white')
 
-scale = 100
+scale = 200
 
 def goto(point):
 	turtle.goto(scale*point['X'],scale*point['Y'])
 
 def PrimitiveComment(c):
+	print c
 	return
 
 def PrimitiveCircle(c):
-	turtle.mode('logo')
+	print 'Draw Circle: '+str(c)
 	turtle.penup()
 	setExposure(c['Exposure'])
 	radius = c['Diameter']/2
@@ -106,21 +122,27 @@ def PrimitiveCircle(c):
 		'Y':c['CenterPoint']['Y']
 	}
 	goto(startpoint)
+	turtle.begin_fill()
 	turtle.pendown()
 	turtle.circle(radius=scale*radius)
 	turtle.penup()
+	turtle.end_fill()
 
 def PrimitiveVectorLine(vl):
+	print 'Draw VectorLine: '+str(vl)
 	turtle.penup()
 	setExposure(vl['Exposure'])
 	turtle.width(scale*vl['Width'])
 	goto(vl['StartPoint'])
+	turtle.begin_fill()
 	turtle.pendown()
 	goto(vl['EndPoint'])
 	turtle.penup()
+	turtle.end_fill()
 	return
 
 def PrimitiveCenterLine(cl):
+	print 'Draw CenterLine: ' + str(cl)
 	turtle.penup()
 	setExposure(cl['Exposure'])
 	turtle.width(1)
@@ -152,6 +174,7 @@ def PrimitiveCenterLine(cl):
 	return
 
 def PrimitiveLowerLeftLine(lll):
+	print 'Draw LowerLeftLine: ' + str(lll)
 	turtle.penup()
 	setExposure(lll['Exposure'])
 	turtle.width(1)
@@ -180,9 +203,37 @@ def PrimitiveLowerLeftLine(lll):
 	return
 
 def PrimitiveOutline(ol):
+	print 'Draw Outline: ' + str(ol)
+	turtle.penup()
+	setExposure(ol['Exposure'])
+	turtle.width(1)
+	startpoint = ol['Points'][0]
+	goto(startpoint)
+	turtle.begin_fill()
+	turtle.pendown
+	for p in ol['Points']:
+		goto(p)
+	goto(startpoint)
+	turtle.penup()
+	turtle.end_fill()
 	return
 
-def PrimitivePolygon(poly):
+def PrimitivePolygon(poly,point):
+	print 'Draw Polygon: ' + str(poly)
+	turtle.penup()
+	setExposure(poly['Exposure'])
+	turtle.width(1)
+	radius = poly['Diameter']/2
+	startpoint = {
+		'X':point['X']+radius,
+		'Y':point['Y']
+	}
+	goto(startpoint)
+	turtle.begin_fill()
+	turtle.pendown()
+	turtle.circle(radius=scale*radius,steps=poly['Vertices'])
+	turtle.penup()
+	turtle.end_fill()
 	return
 
 def PrimitiveMoire(m):
@@ -213,8 +264,12 @@ def StandardPolygon(poly):
 dispatcher = GerberReader.EventDispatcher()
 g = GerberReader.gerber(dispatcher)
 c = Controller(dispatcher)
-with open('../data/example_aperture_macro_primitives','r+') as f:
+turtle.mode('logo')
+turtle.speed('fastest')
+turtle.penup()
+with open('../data/example','r+') as f:
 	g.Loads(f.read())
 
+# print g.Graphics['ApertureMacros']
 
 turtle.exitonclick()

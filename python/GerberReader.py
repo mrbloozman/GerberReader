@@ -1,6 +1,7 @@
+from __future__ import division
 import re
 # import turtle
-import sys
+# import sys
 
 # Event Handling
 class Event( object ):
@@ -121,6 +122,8 @@ reGraphicADName = '(?<=^D[1-9][0-9]).*(?=,)|(?<=^D[1-9][0-9]).*$'
 reGraphicADModifiers = '(?<=,).*'
 reGraphicAM = '(?<=^AM).*'
 reGraphicAMExpr = '^\$.*'
+reGraphicAMExprNum = '(?<=\$).*(?==)'
+reGraphicAMExprVar = '(?<==).*'
 reGraphicAMComment = '(?<=^0 ).*'
 reGraphicSR = '(?<=^SR).*'
 reGraphicSRX = '(?<=X).*(?=Y)'
@@ -163,9 +166,12 @@ primitive = {
 
 # Aperture Macro helpers
 def EvalVar(var,modifiers):
+	# print 'var: ' + var
+	# print 'modifiers: ' + str(modifiers)
 	for i in range(len(modifiers)):
 		var=var.replace('$'+str(i+1),modifiers[i])
-	var=var.replace('X','*')
+	var=var.replace('x','*').replace('X','*')
+	# print var
 	return float(eval(var))
 
 def EvalExposure(mod):
@@ -177,12 +183,36 @@ def EvalExposure(mod):
 		exp = ''
 	return exp
 
+def	EvalExpression(expr,mods):
+	# print 'expr: ' + expr
+	# print 'mods: ' + str(mods)
+	varnum = int(regex(reGraphicAMExprNum,expr))
+	varexpr = regex(reGraphicAMExprVar,expr)
+	done = False
+
+	while not done:
+		if len(mods)<varnum:
+			mods.append('_')
+		elif len(mods)==varnum:
+			mods[varnum-1] = str(EvalVar(varexpr,mods))
+			done = True
+		else:
+			mods[varnum-1] = str(EvalVar(varexpr,mods))
+			done = True
+
+	return mods
+
+
+
 def EvalPrimitives(primitives,modifiers):
 	result = []
 	# Primitive: Code, Name, Modifiers
 	for p in primitives:
 		pname = p['Name']
-		if pname == primitive[0]:
+		if pname == 'Expression':
+		# Expression - add evaluated value to modifiers
+			modifiers = EvalExpression(p['Modifiers'][0],modifiers)
+		elif pname == primitive[0]:
 		# Comment
 			result.append({'Comment':p['Modifiers'][0]})
 		elif pname == primitive[1]:
@@ -289,19 +319,19 @@ def EvalPrimitives(primitives,modifiers):
 			# Exposure
 			exp = EvalExposure(p['Modifiers'][0])
 			# N points
-			npoints = int(EvalVar(p['Modifiers'][1]),modifiers)
+			npoints = int(EvalVar(p['Modifiers'][1],modifiers))
 			# Start X Coord
 			startx = EvalVar(p['Modifiers'][2],modifiers)
 			# Start Y Coord
 			starty = EvalVar(p['Modifiers'][3],modifiers)
 			# points
 			points = [{'X':startx,'Y':starty}]
-			for point in range(points):
+			for point in range(npoints):
 				x = EvalVar(p['Modifiers'][(2*(point+2))],modifiers)
 				y = EvalVar(p['Modifiers'][(2*(point+2))+1],modifiers)
 				points.append({'X':x,'Y':y})
 			# Rotation
-			ang = EvalVar(p['Modifiers'][4+(2*points)],modifiers)
+			ang = EvalVar(p['Modifiers'][4+(2*npoints)],modifiers)
 			ol = {
 				'Exposure':exp,
 				'NPoints':npoints,
@@ -327,7 +357,7 @@ def EvalPrimitives(primitives,modifiers):
 			poly = {
 				'Exposure':exp,
 				'Vertices':vert,
-				'Centerpoint':{
+				'CenterPoint':{
 					'X':x,
 					'Y':y
 				},
@@ -675,7 +705,7 @@ class gerber:
 		else:
 			apertureDefinition['Primitives'] = {}
 		apertureDefinition['Standard'] = EvalStandard(apertureDefinition)
-		print 'Change aperture to: ' + str(apertureDefinition)
+		# print 'Change aperture to: ' + str(apertureDefinition)
 		self.Graphics['CurrentAperture'] = apertureDefinition
 		self.event_dispatcher.dispatch_event(
 			OperationEvent(OperationEvent.APERTURE, self)
