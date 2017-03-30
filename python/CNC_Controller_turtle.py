@@ -1,6 +1,7 @@
 import GerberReader
 import turtle
 
+
 class Controller( object ):
 	"""
 	Class who responds to Operation events
@@ -61,7 +62,7 @@ class Controller( object ):
 		# goto(event.data.Graphics['CurrentPoint'])
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
-			StandardCircle(aperture['Standard']['C'])
+			StandardCircle(aperture['Standard']['C'],event.data.Graphics['CurrentPoint'])
 		if 'Primitives' in aperture:
 			for p in aperture['Primitives']:
 				if 'Comment' in p:
@@ -107,19 +108,27 @@ scale = 200
 
 def goto(point):
 	turtle.goto(scale*point['X'],scale*point['Y'])
+	posx = turtle.position()[0]
+	posy = turtle.position()[1]
+	screenx = screen.screensize()[0]
+	screeny = screen.screensize()[1]
+	if abs(posx)*2 >= screenx:
+		screen.screensize(canvwidth=2*posx+1)
+	if abs(posy)*2 >= screeny:
+		screen.screensize(canvheight=2*posy+1)
 
 def PrimitiveComment(c):
 	print c
 	return
 
-def PrimitiveCircle(c):
+def PrimitiveCircle(c,point):
 	print 'Draw Circle: '+str(c)
 	turtle.penup()
 	setExposure(c['Exposure'])
 	radius = c['Diameter']/2
 	startpoint = {
-		'X':c['CenterPoint']['X']+radius,
-		'Y':c['CenterPoint']['Y']
+		'X':c['CenterPoint']['X']+point['X']+radius,
+		'Y':c['CenterPoint']['Y']+point['Y']
 	}
 	goto(startpoint)
 	turtle.begin_fill()
@@ -128,39 +137,47 @@ def PrimitiveCircle(c):
 	turtle.penup()
 	turtle.end_fill()
 
-def PrimitiveVectorLine(vl):
+def PrimitiveVectorLine(vl,point):
 	print 'Draw VectorLine: '+str(vl)
 	turtle.penup()
 	setExposure(vl['Exposure'])
 	turtle.width(scale*vl['Width'])
-	goto(vl['StartPoint'])
+	startpoint = {
+		'X':vl['StartPoint']['X']+point['X'],
+		'Y':vl['StartPoint']['Y']+point['Y']
+	}
+	endpoint = {
+		'X':vl['EndPoint']['X']+point['X'],
+		'Y':vl['EndPoint']['Y']+point['Y']
+	}
+	goto(startpoint)
 	turtle.begin_fill()
 	turtle.pendown()
-	goto(vl['EndPoint'])
+	goto(endpoint)
 	turtle.penup()
 	turtle.end_fill()
 	return
 
-def PrimitiveCenterLine(cl):
+def PrimitiveCenterLine(cl,point):
 	print 'Draw CenterLine: ' + str(cl)
 	turtle.penup()
 	setExposure(cl['Exposure'])
 	turtle.width(1)
 	point1 = {
-		'X':cl['CenterPoint']['X']-(cl['Width']/2),
-		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)
+		'X':cl['CenterPoint']['X']-(cl['Width']/2)+point['X'],
+		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)+point['Y']
 	}
 	point2 = {
-		'X':cl['CenterPoint']['X']+(cl['Width']/2),
-		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)
+		'X':cl['CenterPoint']['X']+(cl['Width']/2)+point['X'],
+		'Y':cl['CenterPoint']['Y']-(cl['Height']/2)+point['Y']
 	}
 	point3 = {
-		'X':cl['CenterPoint']['X']+(cl['Width']/2),
-		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)
+		'X':cl['CenterPoint']['X']+(cl['Width']/2)+point['X'],
+		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)+point['Y']
 	}
 	point4 = {
-		'X':cl['CenterPoint']['X']-(cl['Width']/2),
-		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)
+		'X':cl['CenterPoint']['X']-(cl['Width']/2)+point['X'],
+		'Y':cl['CenterPoint']['Y']+(cl['Height']/2)+point['Y']
 	}
 	goto(point1)
 	turtle.begin_fill()
@@ -173,24 +190,27 @@ def PrimitiveCenterLine(cl):
 	turtle.end_fill()
 	return
 
-def PrimitiveLowerLeftLine(lll):
+def PrimitiveLowerLeftLine(lll,point):
 	print 'Draw LowerLeftLine: ' + str(lll)
 	turtle.penup()
 	setExposure(lll['Exposure'])
 	turtle.width(1)
-	point1 = lll['LowerLeftPoint']
+	point1 = {
+		'X':lll['LowerLeftPoint']+point['X'],
+		'Y':lll['LowerLeftPoint']+point['Y']
+		}
 	point2 = {
-		'X':lll['LowerLeftPoint']['X']+lll['Width'],
-		'Y':lll['LowerLeftPoint']['Y']
-	}
+		'X':lll['LowerLeftPoint']['X']+lll['Width']+point['X'],
+		'Y':lll['LowerLeftPoint']['Y']+point['Y']
+		}
 	point3 = {
-		'X':lll['LowerLeftPoint']['X']+lll['Width'],
-		'Y':lll['LowerLeftPoint']['Y']+lll['Height']
-	}
+		'X':lll['LowerLeftPoint']['X']+lll['Width']+point['X'],
+		'Y':lll['LowerLeftPoint']['Y']+lll['Height']+point['Y']
+		}
 	point4 = {
-		'X':lll['LowerLeftPoint']['X'],
-		'Y':lll['LowerLeftPoint']['Y']+lll['Height']
-	}
+		'X':lll['LowerLeftPoint']['X']+point['X'],
+		'Y':lll['LowerLeftPoint']['Y']+lll['Height']+point['Y']
+		}
 	goto(point1)
 	turtle.begin_fill()
 	turtle.pendown()
@@ -202,16 +222,23 @@ def PrimitiveLowerLeftLine(lll):
 	turtle.end_fill()
 	return
 
-def PrimitiveOutline(ol):
+def PrimitiveOutline(ol,point):
 	print 'Draw Outline: ' + str(ol)
 	turtle.penup()
 	setExposure(ol['Exposure'])
 	turtle.width(1)
-	startpoint = ol['Points'][0]
+	startpoint = {
+		'X':ol['Points'][0]['X']+point['X'],
+		'Y':ol['Points'][0]['Y']+point['Y']
+		}
 	goto(startpoint)
 	turtle.begin_fill()
 	turtle.pendown
 	for p in ol['Points']:
+		p = {
+		'X':p['X']+point['X'],
+		'Y':p['Y']+point['Y']
+		}
 		goto(p)
 	goto(startpoint)
 	turtle.penup()
@@ -236,13 +263,13 @@ def PrimitivePolygon(poly,point):
 	turtle.end_fill()
 	return
 
-def PrimitiveMoire(m):
+def PrimitiveMoire(m,point):
 	return
 
-def PrimitiveThermal(t):
+def PrimitiveThermal(t,point):
 	return
 
-def StandardCircle(c):
+def StandardCircle(c,point):
 	radius = c['Diameter']/2
 	startpoint = {
 		'X':((turtle.position()[0]/scale)+radius),
@@ -252,22 +279,23 @@ def StandardCircle(c):
 	turtle.pendown()
 	turtle.circle(radius=scale*radius)
 
-def StandardRectangle(r):
+def StandardRectangle(r,point):
 	return
 
-def StandardObround(o):
+def StandardObround(o,point):
 	return
 
-def StandardPolygon(poly):
+def StandardPolygon(poly,point):
 	return
 
 dispatcher = GerberReader.EventDispatcher()
 g = GerberReader.gerber(dispatcher)
 c = Controller(dispatcher)
+screen = turtle.Screen()
 turtle.mode('logo')
 turtle.speed('fastest')
 turtle.penup()
-with open('../data/example','r+') as f:
+with open('../data/G04 Ucamco ex. 2 Shapes','r+') as f:
 	g.Loads(f.read())
 
 # print g.Graphics['ApertureMacros']

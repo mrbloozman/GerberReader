@@ -438,10 +438,14 @@ def EvalStandard(apdef):
 		}
 	elif name == 'P':
 	# Polygon
+		nmods = len(apdef['Modifiers'])
 		outerdiameter = float(apdef['Modifiers'][0])
 		vertices = int(apdef['Modifiers'][1])
-		rotation = float(apdef['Modifiers'][2])
-		if len(apdef['Modifiers'])>3:
+		if nmods>2:
+			rotation = float(apdef['Modifiers'][2])
+		else:
+			rotation = 0.0
+		if nmods>3:
 			hole = float(apdef['Modifiers'][3])
 		else:
 			hole = 0.0
@@ -529,7 +533,7 @@ class gerber:
 			'J':0.0
 		},
 		'LevelPolarity':'D',
-		'CurrentAperture':{},
+		'CurrentAperture':{'Standard':{}},
 		'QuadrantMode':'', # SINGLE, MULTI
 		'InterpolationMode':'', # LIN, CW, CCW
 		'CurrentPoint':{
