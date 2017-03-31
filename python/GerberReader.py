@@ -415,10 +415,17 @@ def EvalStandard(apdef):
 	if name == 'C':
 	# Circle
 		dia = float(apdef['Modifiers'][0])
-		if len(apdef['Modifiers'])>1:
-			hole = float(apdef['Modifiers'][1])
+		if len(apdef['Modifiers'])>2:
+			hole = {
+				'XSize':float(apdef['Modifiers'][1]),
+				'YSize':float(apdef['Modifiers'][2])
+				}
+		elif len(apdef['Modifiers'])>1:
+			hole = {
+				'Diameter':float(apdef['Modifiers'][1])
+				}
 		else:
-			hole = 0.0
+			hole = {}
 		result[name] = {
 			'Diameter':dia,
 			'Hole':hole
@@ -427,10 +434,17 @@ def EvalStandard(apdef):
 	# Rectangle or Obround
 		xsize = float(apdef['Modifiers'][0])
 		ysize = float(apdef['Modifiers'][1])
-		if len(apdef['Modifiers'])>2:
-			hole = float(apdef['Modifiers'][2])
+		if len(apdef['Modifiers'])>3:
+			hole = {
+				'XSize':float(apdef['Modifiers'][2]),
+				'YSize':float(apdef['Modifiers'][3])
+				}
+		elif len(apdef['Modifiers'])>2:
+			hole = {
+				'Diameter':float(apdef['Modifiers'][2])
+				}
 		else:
-			hole = 0.0
+			hole = {}
 		result[name] = {
 			'XSize':xsize,
 			'YSize':ysize,
@@ -445,10 +459,17 @@ def EvalStandard(apdef):
 			rotation = float(apdef['Modifiers'][2])
 		else:
 			rotation = 0.0
-		if nmods>3:
-			hole = float(apdef['Modifiers'][3])
+		if nmods>4:
+			hole = {
+				'XSize':float(apdef['Modifiers'][3]),
+				'YSize':float(apdef['Modifiers'][4])
+				}
+		elif nmods>3:
+			hole = {
+				'Diameter':float(apdef['Modifiers'][3])
+				}
 		else:
-			hole = 0.0
+			hole = {}
 		result[name] = {
 			'OuterDiameter':outerdiameter,
 			'Vertices':vertices,

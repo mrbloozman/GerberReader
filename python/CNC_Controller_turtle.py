@@ -63,6 +63,12 @@ class Controller( object ):
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
 			StandardCircle(aperture['Standard']['C'],event.data.Graphics['CurrentPoint'])
+		if 'R' in aperture['Standard']:
+			StandardRectangle(aperture['Standard']['R'],event.data.Graphics['CurrentPoint'])
+		if 'O' in aperture['Standard']:
+			StandardObround(aperture['Standard']['O'],event.data.Graphics['CurrentPoint'])
+		if 'P' in aperture['Standard']:
+			StandardPolygon(aperture['Standard']['P'],event.data.Graphics['CurrentPoint'])
 		if 'Primitives' in aperture:
 			for p in aperture['Primitives']:
 				if 'Comment' in p:
@@ -104,7 +110,7 @@ def setExposure(exp):
 		turtle.pen(pencolor='white')
 		turtle.color('white')
 
-scale = 200
+
 
 def goto(point):
 	turtle.goto(scale*point['X'],scale*point['Y'])
@@ -122,14 +128,14 @@ def PrimitiveComment(c):
 	return
 
 def PrimitiveCircle(c,point):
-	print 'Draw Circle: '+str(c)
-	turtle.penup()
+	print 'Draw Circle: '+str(c) + ' at point: '+ str(point)
 	setExposure(c['Exposure'])
-	radius = c['Diameter']/2
+	radius = c['Diameter']/2.0
 	startpoint = {
-		'X':c['CenterPoint']['X']+point['X']+radius,
-		'Y':c['CenterPoint']['Y']+point['Y']
+		'X':c['CenterPoint']['X']+point['X'],
+		'Y':c['CenterPoint']['Y']+point['Y']-radius
 	}
+	print str(startpoint)
 	goto(startpoint)
 	turtle.begin_fill()
 	turtle.pendown()
@@ -139,7 +145,6 @@ def PrimitiveCircle(c,point):
 
 def PrimitiveVectorLine(vl,point):
 	print 'Draw VectorLine: '+str(vl)
-	turtle.penup()
 	setExposure(vl['Exposure'])
 	turtle.width(scale*vl['Width'])
 	startpoint = {
@@ -160,7 +165,6 @@ def PrimitiveVectorLine(vl,point):
 
 def PrimitiveCenterLine(cl,point):
 	print 'Draw CenterLine: ' + str(cl)
-	turtle.penup()
 	setExposure(cl['Exposure'])
 	turtle.width(1)
 	point1 = {
@@ -192,7 +196,6 @@ def PrimitiveCenterLine(cl,point):
 
 def PrimitiveLowerLeftLine(lll,point):
 	print 'Draw LowerLeftLine: ' + str(lll)
-	turtle.penup()
 	setExposure(lll['Exposure'])
 	turtle.width(1)
 	point1 = {
@@ -224,7 +227,6 @@ def PrimitiveLowerLeftLine(lll,point):
 
 def PrimitiveOutline(ol,point):
 	print 'Draw Outline: ' + str(ol)
-	turtle.penup()
 	setExposure(ol['Exposure'])
 	turtle.width(1)
 	startpoint = {
@@ -247,7 +249,6 @@ def PrimitiveOutline(ol,point):
 
 def PrimitivePolygon(poly,point):
 	print 'Draw Polygon: ' + str(poly)
-	turtle.penup()
 	setExposure(poly['Exposure'])
 	turtle.width(1)
 	radius = poly['Diameter']/2
@@ -264,25 +265,165 @@ def PrimitivePolygon(poly,point):
 	return
 
 def PrimitiveMoire(m,point):
+	print 'Draw Moire: '+str(m)
+	turtle.width(1)
+	radius = m['Diameter']/2.0
+	rings = 1
+
+	while (rings < m['MaxRings']) and (radius > 0):
+		outerring = {
+			'Exposure':'ON',
+			'Diameter':radius*2.0,
+			'CenterPoint':m['CenterPoint']
+		}
+		PrimitiveCircle(outerring,point)
+		radius = radius - m['RingThickness']
+		innerring = {
+			'Exposure':'OFF',
+			'Diameter':radius*2.0,
+			'CenterPoint':m['CenterPoint']
+		}
+		PrimitiveCircle(innerring,point)
+		radius = radius - m['RingGap']
+
+	xhair = {
+		'Exposure':'ON',
+		'Width':m['CrosshairLength'],
+		'Height':m['CrosshairThickness'],
+		'CenterPoint':m['CenterPoint'],
+		'Angle':0.0
+	}
+	PrimitiveCenterLine(xhair,point)
+
+	yhair = {
+		'Exposure':'ON',
+		'Width':m['CrosshairThickness'],
+		'Height':m['CrosshairLength'],
+		'CenterPoint':m['CenterPoint'],
+		'Angle':0.0
+	}
+	PrimitiveCenterLine(yhair,point)
 	return
 
 def PrimitiveThermal(t,point):
+	outerring = {
+		'Exposure':'ON',
+		'Diameter':t['OuterDiameter'],
+		'CenterPoint':t['CenterPoint']
+	}
+	PrimitiveCircle(outerring,point)
+
+	innerring = {
+		'Exposure':'OFF',
+		'Diameter':t['InnerDiameter'],
+		'CenterPoint':t['CenterPoint']
+	}
+	PrimitiveCircle(innerring,point)
+
+	xhair = {
+		'Exposure':'OFF',
+		'Width':t['OuterDiameter'],
+		'Height':t['GapThickness'],
+		'CenterPoint':t['CenterPoint'],
+		'Angle':0.0
+	}
+	PrimitiveCenterLine(xhair,point)
+
+	yhair = {
+		'Exposure':'OFF',
+		'Width':t['GapThickness'],
+		'Height':t['OuterDiameter'],
+		'CenterPoint':t['CenterPoint'],
+		'Angle':0.0
+	}
+	PrimitiveCenterLine(yhair,point)
+	return
+
+def StandardHole(h,point):
+	if len(h)==1:
+		hole = {
+			'Exposure':'OFF',
+			'Diameter':h['Diameter'],
+			'CenterPoint':{'X':0.0,'Y':0.0}
+		}
+		PrimitiveCircle(hole,point)
+	elif len(h)==2:
+		hole = {
+			'Exposure':'OFF',
+			'Width':h['XSize'],
+			'Height':h['YSize'],
+			'CenterPoint':{'X':0.0,'Y':0.0},
+			'Angle':0.0
+		}
+		PrimitiveCenterLine(hole,point)
 	return
 
 def StandardCircle(c,point):
-	radius = c['Diameter']/2
-	startpoint = {
-		'X':((turtle.position()[0]/scale)+radius),
-		'Y':(turtle.position()[1]/scale)
+	circ = {
+		'Exposure':'ON',
+		'Diameter':c['Diameter'],
+		'CenterPoint':{'X':0.0,'Y':0.0}
 	}
-	goto(startpoint)
-	turtle.pendown()
-	turtle.circle(radius=scale*radius)
+	PrimitiveCircle(circ,point)
+	StandardHole(c['Hole'],point)
+	return
 
 def StandardRectangle(r,point):
+	rect = {
+		'Exposure':'ON',
+		'Width':r['XSize'],
+		'Height':r['YSize'],
+		'CenterPoint':{'X':0.0,'Y':0.0},
+		'Angle':0.0
+	}
+	PrimitiveCenterLine(rect,point)
+	StandardHole(r['Hole'],point)
 	return
 
 def StandardObround(o,point):
+	if o['XSize']>=o['YSize']:
+		dia = o['YSize']
+		c1point = {
+			'X':-(o['XSize']-dia)/2.0,
+			'Y':0.0
+			}
+		c2point = {
+			'X':(o['XSize']-dia)/2.0,
+			'Y':0.0
+			}
+		r = {
+			'XSize':o['XSize']-dia,
+			'YSize':o['YSize'],
+			'Hole':o['Hole']
+			}
+	else:
+		dia = o['XSize']
+		c1point = {
+			'Y':-(o['YSize']-dia)/2.0,
+			'X':0.0
+			}
+		c2point = {
+			'Y':(o['YSize']-dia)/2.0,
+			'X':0.0
+			}
+		r = {
+			'XSize':o['XSize'],
+			'YSize':o['YSize']-dia,
+			'Hole':o['Hole']
+			}
+	c1 = {
+		'Exposure':'ON',
+		'Diameter':dia,
+		'CenterPoint':c1point
+	}
+	c2 = {
+		'Exposure':'ON',
+		'Diameter':dia,
+		'CenterPoint':c2point
+	}
+	PrimitiveCircle(c1,point)
+	PrimitiveCircle(c2,point)
+	StandardRectangle(r,point)
 	return
 
 def StandardPolygon(poly,point):
@@ -292,10 +433,14 @@ dispatcher = GerberReader.EventDispatcher()
 g = GerberReader.gerber(dispatcher)
 c = Controller(dispatcher)
 screen = turtle.Screen()
-turtle.mode('logo')
+scale = 1
+screen.reset()
+turtle.setworldcoordinates(-1,-1,2,2)
+turtle.mode('world')
 turtle.speed('fastest')
+turtle.hideturtle()
 turtle.penup()
-with open('../data/G04 Ucamco ex. 2 Shapes','r+') as f:
+with open('../data/Obrounds','r+') as f:
 	g.Loads(f.read())
 
 # print g.Graphics['ApertureMacros']
