@@ -24,7 +24,54 @@ class Controller( object ):
 		)
 
 		self.event_dispatcher.add_event_listener(
+			GerberReader.OperationEvent.REGION, self.on_region_event
+		)
+
+		self.event_dispatcher.add_event_listener(
+			GerberReader.OperationEvent.INTERPOLATION, self.on_interpolation_event
+		)
+
+		self.event_dispatcher.add_event_listener(
+			GerberReader.OperationEvent.LEVELPOLARITY, self.on_levelpolarity_event
+		)
+
+		self.event_dispatcher.add_event_listener(
+			GerberReader.OperationEvent.QUADRANT, self.on_quadrant_event
+		)
+
+		self.event_dispatcher.add_event_listener(
 			GerberReader.OperationEvent.APERTURE, self.on_aperture_event
+		)
+
+		self.onColor = 'black'
+		self.offColor = 'white'
+
+
+
+	def on_region_event(self, event):
+		setRegion(event.data.Graphics['RegionMode'])
+
+		self.event_dispatcher.dispatch_event(
+			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
+		)
+
+	def on_interpolation_event(self, event):
+
+		self.event_dispatcher.dispatch_event(
+			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
+		)
+
+	def on_levelpolarity_event(self, event):
+		setLevelPolarity(event.data.Graphics['LevelPolarity'])
+
+		self.event_dispatcher.dispatch_event(
+			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
+		)
+
+	def on_quadrant_event(self, event):
+
+		self.event_dispatcher.dispatch_event(
+			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
 
 	def on_draw_event(self, event):
@@ -33,9 +80,13 @@ class Controller( object ):
 		"""
 		point = event.data.Graphics['CurrentPoint']
 		aperture = event.data.Graphics['CurrentAperture']
+		setLevelPolarity(event.data.Graphics['LevelPolarity'])
+		setExposure('ON')
 		if 'C' in aperture['Standard']:
 			turtle.width(scale*aperture['Standard']['C']['Diameter'])
-		print 'DRAW: ' + str(point)
+		else:
+			turtle.width(1)
+		print 'DRAW: ' + str(point) + ' Interpolation: ' + str(event.data.Graphics['InterpolationMode']) + ' Region: ' + str(event.data.Graphics['RegionMode']) + ' Quadrant: '+ str(event.data.Graphics['QuadrantMode'])
 		turtle.pendown()
 		goto(point)
 		turtle.penup()
@@ -59,7 +110,7 @@ class Controller( object ):
 		"""
 		Event handler for FLASH event type
 		"""
-		# goto(event.data.Graphics['CurrentPoint'])
+		setLevelPolarity(event.data.Graphics['LevelPolarity'])
 		aperture = event.data.Graphics['CurrentAperture']
 		if 'C' in aperture['Standard']:
 			StandardCircle(aperture['Standard']['C'],event.data.Graphics['CurrentPoint'])
@@ -97,19 +148,39 @@ class Controller( object ):
 		aperture = event.data.Graphics['CurrentAperture']
 		# print 'APERTURE: '+ str(aperture)
 		# turtle.pen(fillcolor="black", pencolor="black", pensize=int(100*float(aperture['Modifiers'][0])))
-		turtle.pen(fillcolor="black", pencolor="black")
+		# turtle.pen(fillcolor="black", pencolor="black")
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
 
-def setExposure(exp):
-	if exp == 'ON':
-		turtle.pen(pencolor='black')
-		turtle.color('black')
-	elif exp == 'OFF':
-		turtle.pen(pencolor='white')
-		turtle.color('white')
+def setRegion(r):
+	if r=='ON':
+		# if turtle.fill() == False:
+		print 'REGION: ' + r
+		turtle.begin_fill()
+	elif r=='OFF':
+		# if turtle.fill() == True:
+		print 'REGION: ' + r
+		turtle.end_fill()
 
+def setExposure(exp):
+	print 'EXPOSURE: '+exp
+	if exp == 'ON':
+		turtle.color(c.onColor,c.onColor)
+	elif exp == 'OFF':
+		turtle.color(c.offColor,c.offColor)
+
+def setLevelPolarity(lp):
+	if lp == 'DARK':
+		print 'LEVELPOLARIY: '+lp
+		c.onColor='black'
+		c.offColor='white'
+		turtle.color(c.onColor,c.onColor)
+	elif lp == 'CLEAR':
+		print 'LEVELPOLARIY: '+lp
+		c.onColor='white'
+		c.offColor='black'
+		turtle.color(c.onColor,c.onColor)
 
 
 def goto(point):
@@ -435,12 +506,12 @@ c = Controller(dispatcher)
 screen = turtle.Screen()
 scale = 1
 screen.reset()
-turtle.setworldcoordinates(-1,-1,2,2)
+turtle.setworldcoordinates(-1,-1,5,5)
 turtle.mode('world')
 turtle.speed('fastest')
 turtle.hideturtle()
 turtle.penup()
-with open('../data/Obrounds','r+') as f:
+with open('../data/G04 Ucamco ex. 2 Shapes','r+') as f:
 	g.Loads(f.read())
 
 # print g.Graphics['ApertureMacros']

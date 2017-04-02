@@ -99,6 +99,10 @@ class OperationEvent(Event):
 	DRAW = 'draw'
 	MOVE = 'move'
 	FLASH = 'flash'
+	LEVELPOLARITY = 'levelpolarity'
+	REGION = 'region'
+	INTERPOLATION = 'interpolation'
+	QUADRANT = 'quadrant'
 	APERTURE = 'aperture'
 	ACK = 'ack'
 
@@ -140,7 +144,7 @@ reCoordJ = '(?<=J)[0-9+-]*'
 reCoordD = 'D01|D1|D02|D2|D03|D3'
 reCoordG = 'G01|G1|G02|G2|G03|G3'
 reDnn = '^D[1-9][0-9]*$'
-reGnn = '^G[1-9][0-9]*$'
+reGnn = '^G[0-9][0-9]*$'
 reG04 = '(?<=G4).*|(?<=G04).*'
 
 def regex(ex,s):
@@ -553,7 +557,7 @@ class gerber:
 			'I':0.0,
 			'J':0.0
 		},
-		'LevelPolarity':'D',
+		'LevelPolarity':'DARK',  # DARK, CLEAR
 		'CurrentAperture':{'Standard':{}},
 		'QuadrantMode':'', # SINGLE, MULTI
 		'InterpolationMode':'', # LIN, CW, CCW
@@ -677,11 +681,16 @@ class gerber:
 		for db in lp:
 			lp = regex(reGraphicLP,db)
 			lpol = regex(reGraphicLPCD,lp)
-			if lpol:
-				self.Graphics['LevelPolarity'] = lpol
+			if lpol=='D':
+				self.Graphics['LevelPolarity'] = 'DARK'
+			elif lpol=='C':
+				self.Graphics['LevelPolarity'] = 'CLEAR'
 			else:
 				print lp+': Could not parse level polarity!'
 				return False
+			self.event_dispatcher.dispatch_event(
+				OperationEvent( OperationEvent.LEVELPOLARITY, self )
+			)
 		return True
 
 	def D01(self,x,y,i,j):
@@ -694,8 +703,8 @@ class gerber:
 		# self.Coordinates['I'] = i
 		# self.Coordinates['J'] = j
 		self.event_dispatcher.dispatch_event(
-            OperationEvent( OperationEvent.DRAW, self )
-        )
+			OperationEvent( OperationEvent.DRAW, self )
+		)
 		return
 
 	def D02(self,x,y,i,j):
@@ -739,11 +748,11 @@ class gerber:
 		return True
 
 	def GNN(self,gnn):
-		if gnn in(['G01','G1']):
+		if gnn in ['G01','G1']:
 			self.Graphics['InterpolationMode'] = 'LIN'
-		elif gnn in(['G02','G2']):
+		elif gnn in ['G02','G2']:
 			self.Graphics['InterpolationMode'] = 'CW'
-		elif gnn in(['G03','G3']):
+		elif gnn in ['G03','G3']:
 			self.Graphics['InterpolationMode'] = 'CCW'
 		elif gnn == 'G74':
 			self.Graphics['QuadrantMode'] = 'SINGLE'
@@ -751,8 +760,17 @@ class gerber:
 			self.Graphics['QuadrantMode'] = 'MULTI'
 		elif gnn == 'G36':
 			self.Graphics['RegionMode'] = 'ON'
+			self.event_dispatcher.dispatch_event(
+			OperationEvent(OperationEvent.REGION, self)
+			)
 		elif gnn == 'G37':
 			self.Graphics['RegionMode'] = 'OFF'
+			self.event_dispatcher.dispatch_event(
+			OperationEvent(OperationEvent.REGION, self)
+			)
+		else:
+			return False
+		return True
 
 	def G04(self,g04):
 		print 'Comment: '+g04
@@ -770,11 +788,11 @@ class gerber:
 		d = regex(reCoordD,coord)
 		g = regex(reCoordG,coord)
 
-		if g in(['G01','G1']):
+		if g in ['G01','G1']:
 			self.Graphics['InterpolationMode'] = 'LIN'
-		elif g in(['G02','G2']):
+		elif g in ['G02','G2']:
 			self.Graphics['InterpolationMode'] = 'CW'
-		elif g in(['G03','G3']):
+		elif g in ['G03','G3']:
 			self.Graphics['InterpolationMode'] = 'CCW'
 
 		if x:
@@ -860,7 +878,6 @@ class gerber:
 		g04 = regex(reG04,DataBlock)
 		if coord:
 			self.parseCoordinate(coord)
-			return True
 		elif dnn:
 			self.DNN(dnn)
 		elif gnn:
@@ -872,6 +889,7 @@ class gerber:
 		else:
 			print DataBlock+': Could not parse data block!'
 			return False
+		return True
 
 	def Loads(self,s):
 		RecordExCode = False
