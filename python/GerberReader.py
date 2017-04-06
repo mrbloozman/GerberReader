@@ -560,10 +560,12 @@ class gerber:
 		'LevelPolarity':'DARK',  # DARK, CLEAR
 		'CurrentAperture':{'Standard':{}},
 		'QuadrantMode':'', # SINGLE, MULTI
-		'InterpolationMode':'', # LIN, CW, CCW
+		'InterpolationMode':'LIN', # LIN, CW, CCW
 		'CurrentPoint':{
 			'X':0.0,
-			'Y':0.0
+			'Y':0.0,
+			'I':0.0,
+			'J':0.0
 		},
 		'RegionMode':'OFF' # ON, OFF
 	}
@@ -694,26 +696,20 @@ class gerber:
 		return True
 
 	def D01(self,x,y,i,j):
-		# create event handler for physical movements?
-		# turtle.pendown()
-		# turtle.goto(x,y)
-		# turtle.penup()
 		self.Graphics['CurrentPoint']['X'] = x
 		self.Graphics['CurrentPoint']['Y'] = y
-		# self.Coordinates['I'] = i
-		# self.Coordinates['J'] = j
+		self.Graphics['CurrentPoint']['I'] = i
+		self.Graphics['CurrentPoint']['J'] = j
 		self.event_dispatcher.dispatch_event(
 			OperationEvent( OperationEvent.DRAW, self )
 		)
 		return
 
 	def D02(self,x,y,i,j):
-		# turtle.penup()
-		# turtle.goto(x,y)
 		self.Graphics['CurrentPoint']['X'] = x
 		self.Graphics['CurrentPoint']['Y'] = y
-		# self.Coordinates['I'] = i
-		# self.Coordinates['J'] = j
+		self.Graphics['CurrentPoint']['I'] = i
+		self.Graphics['CurrentPoint']['J'] = j
 		self.event_dispatcher.dispatch_event(
             OperationEvent( OperationEvent.MOVE, self )
         )
@@ -722,8 +718,8 @@ class gerber:
 	def D03(self,x,y,i,j):
 		self.Graphics['CurrentPoint']['X'] = x
 		self.Graphics['CurrentPoint']['Y'] = y
-		# self.Coordinates['I'] = i
-		# self.Coordinates['J'] = j
+		self.Graphics['CurrentPoint']['I'] = i
+		self.Graphics['CurrentPoint']['J'] = j
 		self.event_dispatcher.dispatch_event(
             OperationEvent( OperationEvent.FLASH, self )
         )

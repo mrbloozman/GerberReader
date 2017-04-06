@@ -1,5 +1,6 @@
 import GerberReader
 import turtle
+import hashlib
 
 
 class Controller( object ):
@@ -80,16 +81,16 @@ class Controller( object ):
 		"""
 		point = event.data.Graphics['CurrentPoint']
 		aperture = event.data.Graphics['CurrentAperture']
+		interpolation = event.data.Graphics['InterpolationMode']
 		setLevelPolarity(event.data.Graphics['LevelPolarity'])
 		setExposure('ON')
-		if 'C' in aperture['Standard']:
-			turtle.width(scale*aperture['Standard']['C']['Diameter'])
-		else:
-			turtle.width(1)
+
+		if interpolation == 'LIN':
+			drawLine(aperture,point)
+		elif interpolation in ['CW','CCW']:
+			drawArc(aperture,point,interpolation)
 		print 'DRAW: ' + str(point) + ' Interpolation: ' + str(event.data.Graphics['InterpolationMode']) + ' Region: ' + str(event.data.Graphics['RegionMode']) + ' Quadrant: '+ str(event.data.Graphics['QuadrantMode'])
-		turtle.pendown()
-		goto(point)
-		turtle.penup()
+
 		self.event_dispatcher.dispatch_event(
 			GerberReader.OperationEvent ( GerberReader.OperationEvent.ACK, self )
 		)
@@ -182,6 +183,31 @@ def setLevelPolarity(lp):
 		c.offColor='black'
 		turtle.color(c.onColor,c.onColor)
 
+def drawLine(aperture,point):
+	# print str(aperture)
+	if 'Standard' in aperture:
+		if 'C' in aperture['Standard']:
+			width = aperture['Standard']['C']['Diameter']
+		elif 'P' in aperture['Standard']:
+			width = aperture['Standard']['P']['OuterDiameter']
+		else:
+			width = 1
+	else:
+		width = 1
+
+	while width<1:
+		width=width*10
+
+	turtle.width(scale*width)
+	turtle.pendown()
+	print str(turtle.pen())
+	goto(point)
+	turtle.penup()
+	return
+
+def drawArc(aperture,point,interpolation):
+
+	return
 
 def goto(point):
 	turtle.goto(scale*point['X'],scale*point['Y'])
@@ -210,6 +236,7 @@ def PrimitiveCircle(c,point):
 	goto(startpoint)
 	turtle.begin_fill()
 	turtle.pendown()
+	turtle.setheading(90)
 	turtle.circle(radius=scale*radius)
 	turtle.penup()
 	turtle.end_fill()
@@ -330,6 +357,7 @@ def PrimitivePolygon(poly,point):
 	goto(startpoint)
 	turtle.begin_fill()
 	turtle.pendown()
+	turtle.setheading(90)
 	turtle.circle(radius=scale*radius,steps=poly['Vertices'])
 	turtle.penup()
 	turtle.end_fill()
@@ -498,11 +526,21 @@ def StandardObround(o,point):
 	return
 
 def StandardPolygon(poly,point):
+	primpoly = {
+		'Exposure':'ON',
+		'Vertices':poly['Vertices'],
+		'CenterPoint':{'X':0.0,'Y':0.0},
+		'Diameter':poly['OuterDiameter'],
+		'Angle':poly['Rotation']
+	}
+	PrimitivePolygon(primpoly,point)
+	StandardHole(poly['Hole'],point)
 	return
 
 dispatcher = GerberReader.EventDispatcher()
 g = GerberReader.gerber(dispatcher)
 c = Controller(dispatcher)
+m = hashlib.md5()
 screen = turtle.Screen()
 scale = 1
 screen.reset()
@@ -511,9 +549,16 @@ turtle.mode('world')
 turtle.speed('fastest')
 turtle.hideturtle()
 turtle.penup()
-with open('../data/G04 Ucamco ex. 2 Shapes','r+') as f:
-	g.Loads(f.read())
 
-# print g.Graphics['ApertureMacros']
+# filepath='../data/G04 Ucamco ex. 2 Shapes'
+filepath='../data/example'
+
+with open(filepath,'r+') as f:
+	g.Loads(f.read())
+	m.update(f.read())
+
+
+# print str(g.Attributes['.MD5'][0])
+print m.hexdigest()
 
 turtle.exitonclick()
